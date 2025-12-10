@@ -1,0 +1,31 @@
+AI Usage Statement
+
+1. Reason for AI Usage: I utilized AI (Gemini) to assist with this assignment primarily because I am not yet proficient in JavaScript, advanced CSS layouts (specifically Flexbox and responsive design), or implementing web animations. While I understand the logic required, I needed AI assistance to translate that logic into functional front-end code and to achieve the desired visual aesthetic ("Ins style").
+
+2. Portions that were AI-generated:
+
+Front-end Structure & Style: The majority of the index.html file, including the CSS for the responsive layout, and the "glassmorphism" UI effects.
+
+JavaScript Logic: The complex JavaScript functions required to render the Chart.js graph, the real-time clock, and the logic for the 15-minute countdown timer.
+
+Audio Handling: The JavaScript logic to handle browser autoplay policies (e.g., the "silent keeper" workaround) to ensure the alarm sounds correctly.
+
+Refining Python Backend: While the core logic was based on my work, I used AI to partially refactor the Python script into a Flask web server structure to communicate with the front end.
+
+3. Prompts used to generate the code:
+
+"Fix the CSS bug where the chart container keeps stretching infinitely in the flex layout."
+
+"Add a progress bar to the chart timeline that points to the current time."
+
+"Implement a visual 15-minute countdown timer that triggers an audio alarm when it reaches zero."
+
+"The audio is not playing due to browser autoplay restrictions; please generate a solution to keep the audio context active in the background."
+
+4. Modifications made to the AI output:
+
+Debugging & Testing: The code initially had bugs regarding the audio playback (it wouldn't play when the tab was in the background) and the chart rendering (infinite resizing). I identified these issues through testing and iteratively prompted the AI to provide specific fixes (e.g., adding the start overlay button to unlock audio context).
+
+Asset Management: I manually set up the file structure (static/templates folders) and managed the audio files (notification.mp3, start.mp3) to ensure they linked correctly to the generated code.
+
+Logic Verification: I verified that the API calls were fetching the correct data for the Seattle coordinates and that the countdown logic correctly matched the "departure time minus travel time" requirement.
