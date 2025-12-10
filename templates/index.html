@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Clock</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #F9F6F0; --card-bg: #FFFFFF; --text-dark: #3E3B36;
+            --accent: #C79676; --accent-light: rgba(199, 150, 118, 0.15);
+            --blue-rain: #89B3C8;
+            --font-serif: 'Playfair Display', serif;
+            --font-sans: 'DM Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; background-color: var(--bg-color); color: var(--text-dark); font-family: var(--font-sans); height: 100vh; display: flex; overflow: hidden; }
+
+        /* Left Panel */
+        .left-panel { flex: 7; padding: 4vh 4vw; display: flex; flex-direction: column; justify-content: space-between; }
+        .weather-header { display: flex; align-items: center; gap: 2rem; }
+        .temp-curr { font-family: var(--font-serif); font-size: 8vh; font-weight: 700; line-height: 1; }
+        .temp-detail { display: flex; flex-direction: column; font-size: 2vh; color: #888; font-weight: 700; }
+        .rain-tag { background-color: var(--blue-rain); color: white; padding: 0.8vh 2vh; border-radius: 50px; font-size: 1.8vh; margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .clock-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #clock { font-family: var(--font-serif); font-size: 26vh; line-height: 0.9; color: var(--text-dark); letter-spacing: -0.5rem; white-space: nowrap; }
+        #date { font-size: 2.5vh; letter-spacing: 0.4rem; text-transform: uppercase; color: #A09D98; margin-top: 2vh; }
+        .chart-box { position: relative; height: 28vh; width: 100%; background: var(--card-bg); border-radius: 24px; padding: 15px 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); overflow: hidden; }
+
+        /* Right Panel */
+        .right-panel { flex: 3; background: var(--card-bg); border-left: 1px solid rgba(0,0,0,0.03); padding: 4vh 2.5vw; display: flex; flex-direction: column; position: relative; }
+        .schedule-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3vh; }
+        .schedule-header h2 { font-family: var(--font-serif); font-size: 3.5vh; margin: 0; color: var(--text-dark); }
+        .add-btn { background: var(--text-dark); color: white; width: 5vh; height: 5vh; border-radius: 50%; border: none; font-size: 3vh; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
+        .add-btn:hover { transform: scale(1.1); }
+        .events-list { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 100px; }
+        .event-card { background: var(--bg-color); border-radius: 16px; padding: 2vh; margin-bottom: 2vh; position: relative; transition: transform 0.2s; }
+        .event-card:hover { transform: translateY(-2px); }
+        .btn-del { position: absolute; right: 15px; top: 15px; border: none; background: none; color: #ccc; font-size: 1.5rem; cursor: pointer; line-height: 1; }
+        .btn-del:hover { color: #ff6b6b; }
+        .ev-time { font-weight: 700; font-size: 2.2vh; color: var(--text-dark); }
+        .ev-dest { font-size: 1.8vh; color: #666; margin-top: 0.5vh; }
+        .ev-info { display: inline-block; margin-top: 1vh; font-size: 1.5vh; color: var(--accent); background: var(--accent-light); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+
+        /* Countdown Floating Box */
+        #countdown-container { position: absolute; bottom: 3vh; right: 2.5vw; width: calc(100% - 5vw); background: var(--accent); color: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(199, 150, 118, 0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; animation: popIn 0.5s; }
+        @keyframes popIn { from { transform: translateY(100px) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .cd-label { font-size: 1.8vh; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; margin-bottom: 5px; }
+        .cd-timer { font-family: var(--font-mono); font-size: 8vh; font-weight: 700; line-height: 1; }
+        .cd-dest { font-size: 2vh; margin-top: 5px; font-weight: 500; opacity: 0.9; }
+        .blink-urgent { animation: blink 1s infinite; background: #d35400; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+
+        /* Start Overlay */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95); z-index: 2000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .btn-start {
+            background: var(--text-dark); color: white; padding: 20px 40px;
+            font-size: 2vh; border-radius: 50px; border: none; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.2s;
+            font-family: var(--font-serif);
+        }
+        .btn-start:hover { transform: scale(1.05); background: var(--accent); }
+
+        /* Modal & Fullscreen */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 40px; border-radius: 24px; width: 320px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        input { padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; outline: none; }
+        input:focus { border-color: var(--accent); }
+        .btn-save { background: var(--text-dark); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-fullscreen { position: absolute; bottom: 20px; right: 20px; border: 1px solid #ddd; background: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; color: #888; transition: all 0.2s; }
+        .btn-fullscreen:hover { border-color: var(--text-dark); color: var(--text-dark); }
+        body.countdown-active .btn-fullscreen { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <h1 style="font-family:var(--font-serif); font-size: 5vh; margin-bottom: 2vh;">Weather Clock</h1>
+        <p style="color:#666; margin-bottom: 4vh;">Click the button below to enable audio notifications</p>
+        <button class="btn-start" onclick="initAudioAndStart()">Start Clock</button>
+    </div>
+
+    <div class="left-panel">
+        <div class="weather-header">
+            <div class="temp-curr"><span id="t-curr">--</span>°</div>
+            <div class="temp-detail">
+                <span>H: <span id="t-max">--</span>°</span>
+                <span>L: <span id="t-min">--</span>°</span>
+            </div>
+            <div class="rain-tag">☔ <span id="t-rain">Loading...</span></div>
+        </div>
+        <div class="clock-container">
+            <div id="clock">00:00</div>
+            <div id="date">LOADING...</div>
+        </div>
+        <div class="chart-box">
+            <canvas id="weatherChart"></canvas>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="schedule-header">
+            <h2>Agenda</h2>
+            <button class="add-btn" onclick="openModal()">+</button>
+        </div>
+        <div class="events-list" id="event-list-container"></div>
+        <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+        <div id="countdown-container">
+            <div class="cd-label">Get Ready</div>
+            <div class="cd-timer" id="cd-timer-text">15:00</div>
+            <div class="cd-dest" id="cd-dest-text">To: UW Hub</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h3>Add Trip</h3>
+            <input id="in-dest" placeholder="Destination">
+            <label style="font-size:0.9rem;color:#999;margin-bottom:-10px">Event Start Time:</label>
+            <input id="in-time" type="time">
+            <input id="in-travel" type="number" placeholder="Travel Time (min)">
+            <button class="btn-save" onclick="saveEvent()">Save</button>
+            <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#999">Cancel</button>
+        </div>
+    </div>
+
+    <audio id="start-sound" src="{{ url_for('static', filename='start.mp3') }}"></audio>
+    <audio id="alarm-sound" src="{{ url_for('static', filename='notification.mp3') }}"></audio>
+    <audio id="silent-sound" loop>
+        <source src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIwAABQkLDxETFRcaHB8iJCYoKy0wMzQ3OTxBQkVIS01QU1VYWltfYWRnamxtcHR3enl9foCBhIeIiouOkJOVmJqcn6Gkp6qsrrG0tbi7vcDExsfIzM7R09XY29ze4OPl5+rt7/Hz9vf5+/8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASCCAv3MVAAAAAAA//oeAAABp9v/7kQAAAAAAAAAAABWQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//oeAAABp9v/7kQAAAAAAAAAAABWQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//oeAAABp9v/7kQAAAAAAAAAAABWQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ... (Chart Plugin) ...
+        const currentTimePlugin = { id: 'currentTimeLine', afterDatasetsDraw: (chart) => { const ctx = chart.ctx; const xAxis = chart.scales['x']; const yAxis = chart.chartArea; const now = new Date(); const hour = now.getHours(); const minute = now.getMinutes(); const hourStr = String(hour).padStart(2, '0'); const labels = chart.data.labels || []; const index = labels.findIndex(lbl => lbl.startsWith(hourStr)); if (index === -1) return; const xStart = xAxis.getPixelForValue(labels[index]); let xEnd; if (index < labels.length - 1) xEnd = xAxis.getPixelForValue(labels[index + 1]); else { const xPrev = xAxis.getPixelForValue(labels[index - 1]); xEnd = xStart + (xStart - xPrev); } const width = xEnd - xStart; const currentX = xStart + (width * (minute / 60)); ctx.save(); ctx.fillStyle = 'rgba(199, 150, 118, 0.1)'; ctx.fillRect(xAxis.left, yAxis.top, currentX - xAxis.left, yAxis.bottom - yAxis.top); ctx.beginPath(); ctx.moveTo(currentX, yAxis.top); ctx.lineTo(currentX, yAxis.bottom); ctx.lineWidth = 2; ctx.strokeStyle = '#C79676'; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.beginPath(); ctx.arc(currentX, yAxis.bottom, 4, 0, 2 * Math.PI); ctx.fillStyle = '#C79676'; ctx.fill(); ctx.restore(); } }; Chart.register(currentTimePlugin);
+
+        // --- Global Variables ---
+        let chartInstance = null;
+        let schedule = [];
+        let completedEvents = new Set();
+        let startedEvents = new Set();
+        let isAudioActivated = false;
+
+        // --- Audio Logic (Strictly Matching Chinese Version) ---
+        function initAudioAndStart() {
+            const silent = document.getElementById('silent-sound');
+            silent.volume = 0.1;
+            silent.play().catch(e => console.error(e));
+
+            const alarm = document.getElementById('alarm-sound');
+            const start = document.getElementById('start-sound');
+
+            [alarm, start].forEach(audio => {
+                audio.load();
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }).catch(e => console.error("Unlock failed", e));
+            });
+
+            document.getElementById('start-overlay').style.display = 'none';
+        }
+
+        function playStartSound() {
+            const audio = document.getElementById('start-sound');
+            audio.volume = 1.0;
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Start sound blocked"));
+        }
+
+        function playAlarmSound() {
+            const audio = document.getElementById('alarm-sound');
+            audio.volume = 1.0;
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Alarm sound blocked"));
+        }
+
+        // --- Core Loop ---
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+            checkCountdown(now);
+        }
+        setInterval(updateClock, 1000);
+
+        // --- Countdown Logic ---
+        function checkCountdown(now) {
+            const cdContainer = document.getElementById('countdown-container');
+            const cdTimer = document.getElementById('cd-timer-text');
+            const cdDest = document.getElementById('cd-dest-text');
+
+            let activeEvent = null;
+
+            schedule.forEach((ev, idx) => {
+                const [h, m] = ev.time.split(':').map(Number);
+                const travelMins = parseInt(ev.travel) || 0;
+
+                let departureTime = new Date();
+                departureTime.setHours(h, m, 0, 0);
+                departureTime.setMinutes(departureTime.getMinutes() - travelMins);
+
+                const diffSeconds = (departureTime - now) / 1000;
+                const uniqueKey = `${idx}-${departureTime.getTime()}`;
+
+                // 15 minute window
+                if (diffSeconds > -1 && diffSeconds <= 900 && !completedEvents.has(uniqueKey)) {
+                    activeEvent = { ev, diffSeconds, uniqueKey };
+
+                    if (!startedEvents.has(uniqueKey)) {
+                        playStartSound();
+                        startedEvents.add(uniqueKey);
+                    }
+                }
+            });
+
+            if (activeEvent) {
+                document.body.classList.add('countdown-active');
+                cdContainer.style.display = 'flex';
+                cdDest.innerText = `To: ${activeEvent.ev.dest}`;
+
+                const m = Math.floor(activeEvent.diffSeconds / 60);
+                const s = Math.floor(activeEvent.diffSeconds % 60);
+                cdTimer.innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+                if (activeEvent.diffSeconds <= 0.5) {
+                    playAlarmSound();
+                    completedEvents.add(activeEvent.uniqueKey);
+                    cdTimer.innerText = "Depart!";
+                    cdContainer.classList.add('blink-urgent');
+                    setTimeout(() => {
+                        cdContainer.style.display = 'none';
+                        document.body.classList.remove('countdown-active');
+                        cdContainer.classList.remove('blink-urgent');
+                    }, 60000);
+                }
+            } else {
+                if (!document.querySelector('.blink-urgent')) {
+                     cdContainer.style.display = 'none';
+                     document.body.classList.remove('countdown-active');
+                }
+            }
+        }
+
+        // --- Weather & Schedule ---
+        // Rain translation helper
+        function translateRain(text) {
+            if(!text) return "Loading...";
+            if(text.includes("无雨")) return "No Rain";
+            if(text.includes("正在下雨")) return "Raining";
+            if(text.includes("即将降雨")) return "Rain Soon";
+            return text;
+        }
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch('/api/weather'); const data = await res.json();
+                document.getElementById('t-curr').innerText = data.current_temp;
+                document.getElementById('t-max').innerText = data.max_temp;
+                document.getElementById('t-min').innerText = data.min_temp;
+                document.getElementById('t-rain').innerText = translateRain(data.rain_forecast);
+                const ctx = document.getElementById('weatherChart').getContext('2d');
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.chart_data.time,
+                        datasets: [
+                            { label: 'Temp', data: data.chart_data.temp, borderColor: '#C79676', tension: 0.4, borderWidth: 3, pointRadius: 0, yAxisID: 'y' },
+                            { label: 'Rain', data: data.chart_data.rain, borderColor: '#89B3C8', backgroundColor: 'rgba(137, 179, 200, 0.25)', fill: true, tension: 0.4, pointRadius: 0, yAxisID: 'y1' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 7, font: {family:"'DM Sans'", size:11} } }, y: { display: false }, y1: { display: false, min: 0, max: 100 } } }
+                });
+            } catch (err) { console.error(err); }
+        }
+        fetchWeather(); setInterval(fetchWeather, 600000);
+
+        async function loadSchedule() {
+            try {
+                const res = await fetch('/api/schedule'); schedule = await res.json();
+                const container = document.getElementById('event-list-container'); container.innerHTML = '';
+                schedule.forEach((ev, idx) => {
+                    const el = document.createElement('div'); el.className = 'event-card';
+                    el.innerHTML = `
+                        <button class="btn-del" onclick="deleteEvent(${idx})">×</button>
+                        <div class="ev-time">${ev.time} Start</div>
+                        <div class="ev-dest">📍 ${ev.dest}</div>
+                        <div class="ev-info">🚗 Travel: ${ev.travel} min</div>
+                    `;
+                    container.appendChild(el);
+                });
+            } catch(e) {}
+        }
+        async function saveEvent() {
+            const dest = document.getElementById('in-dest').value;
+            const time = document.getElementById('in-time').value;
+            const travel = document.getElementById('in-travel').value;
+            if (dest && time) {
+                await fetch('/api/schedule', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({dest, time, travel}) });
+                closeModal(); loadSchedule();
+            }
+        }
+        async function deleteEvent(index) {
+            await fetch('/api/schedule/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({index}) });
+            loadSchedule();
+        }
+        function openModal() { document.getElementById('modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        function toggleFullScreen() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else if(document.exitFullscreen) document.exitFullscreen(); }
+        document.getElementById('modal').addEventListener('click', (e) => { if(e.target.id === 'modal') closeModal(); });
+        loadSchedule();
+    </script>
+</body>
+</html>
