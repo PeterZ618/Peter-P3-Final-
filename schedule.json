@@ -1,10 +1,5 @@
 [
     {
-        "dest": "HH",
-        "time": "18:32",
-        "travel": "0"
-    },
-    {
         "dest": "HUB",
         "time": "15:01",
         "travel": "15"
@@ -12,6 +7,16 @@
     {
         "dest": "HUB",
         "time": "14:57",
+        "travel": "0"
+    },
+    {
+        "dest": "HH",
+        "time": "15:49",
+        "travel": "0"
+    },
+    {
+        "dest": "h",
+        "time": "15:50",
         "travel": "0"
     }
 ]
